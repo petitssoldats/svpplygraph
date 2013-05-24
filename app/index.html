@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<link href="css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+body {
+	background-color: #ECF0F1;
+}
+
+rect {
+  fill: none;
+  pointer-events: all;
+}
+
+.node {
+  fill: #000;
+  cursor: pointer;
+}
+
+.cursor {
+  fill: none;
+  stroke: brown;
+  pointer-events: none;
+}
+
+.link {
+  stroke: #999;
+}
+
+#img {
+	position: absolute;
+	display: none;
+}
+
+svg {
+	position: absolute;
+	top: 0;
+	z-index: 1;
+}
+
+.graph {
+	width: 100%;
+	height: 100%;
+}
+
+.accuracy {
+	position: absolute;
+	right: 10px;
+	top: 55px;
+	z-index: 10;
+}
+
+.scales {
+	position: absolute;
+	right: 10px;
+	top: 80px;
+	z-index: 10;
+}
+
+.priceGravity {
+	position: absolute;
+	right: 10px;
+	top: 105px;
+	z-index: 10;
+}
+
+.categorieGravity {
+	position: absolute;
+	right: 10px;
+	top: 130px;
+	z-index: 10;
+}
+
+.search {
+	position: absolute;
+	left: 10px;
+	top: 55px;
+	z-index: 10;
+}
+
+</style>
+
+<body>
+
+<div id="img">
+
+<img src="" name="imagePlaceHolder" >
+
+</div>
+
+<div class="navbar navbar-inverse navbar-fixed-top">
+  <div class="navbar-inner">
+    <div class="container">
+      <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="brand" href="#">SVPPLY Graph</a>
+      <div class="nav-collapse collapse">
+        <ul class="nav">
+          <li class="active"><a href="#users">User graph</a></li>
+          <li><a href="#categories">Categories graph</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="search">
+	<input type="text" data-provide="typeahead">
+</div>
+
+<div class="accuracy">
+	Link accuracy 
+	<div class="btn-group">
+  		<button class="btn accu btn-mini" onclick="changeLinkAccuracy(0, this)">1</button>
+	  	<button class="btn accu btn-mini" onclick="changeLinkAccuracy(1, this)">2</button>
+	  	<button class="btn accu btn-mini" onclick="changeLinkAccuracy(2, this)">3</button>
+	  	<button class="btn accu btn-mini active" onclick="changeLinkAccuracy(3, this)">4</button>
+	  	<button class="btn accu btn-mini" onclick="changeLinkAccuracy(4, this)">5</button>
+	  	<button class="btn accu btn-mini" onclick="changeLinkAccuracy(1000, this)">none</button>
+	</div>
+</div>
+
+<div class="scales">
+	Type of scale 
+	<div class="btn-group" data-toggle="buttons-radio">
+		<button type="button" class="btn scale btn-mini" onclick="changeScale( 'up', this )">UP</button>
+		<button type="button" class="btn scale btn-mini" onclick="changeScale( 'down', this )">DOWN</button>
+	</div>
+</div>
+
+<div class="priceGravity">
+	Price gravity
+	<div class="btn-group" data-toggle="buttons-radio">
+		<button type="button" class="btn pgrav btn-mini" onclick="changePriceGravity( true , this )">On</button>
+		<button type="button" class="btn pgrav btn-mini active" onclick="changePriceGravity( false, this )">Off</button>
+	</div>
+</div>
+
+<div class="categorieGravity">
+	Category gravity
+	<div class="btn-group" data-toggle="buttons-radio">
+		<button type="button" class="btn cgrav btn-mini" onclick="changeCategorieGravity( true , this )">On</button>
+		<button type="button" class="btn cgrav btn-mini active" onclick="changeCategorieGravity( false, this )">Off</button>
+	</div>
+</div>
+
+<div class="graph">
+
+</div>
+
+<script src="js/jquery-2.0.0.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/d3.v3.min.js"></script>
+
+<script src="js/RelationnalGraph.js"></script>
+
+<script>
+
+_IMAGECACHE = []
+
+d3.json('../products.json', function(err, data) {
+
+	autocomplete = []
+
+	data.forEach( function(item,index) {
+		// _IMAGECACHE[index]     = new Image();
+		// _IMAGECACHE[index].src = item.img:
+		autocomplete.push( item.title );
+	})
+
+	d3.json('../users.json', function(err, users) {
+
+		$('input').typeahead({
+			source: autocomplete,
+			updater: function(d) {
+				relationnalGraph.select(d);
+			}
+		})
+
+		relationnalGraph = new RelationnalGraph( d3.select(".graph") )
+							.attr( 'width' , $(window).width()  )
+							.attr( 'height', $(window).height() )
+							.attr( 'datum', data )
+							.attr( 'links', users )
+							.update()
+
+		relationnalGraph.attr( 'mouseover', function(node, d) {
+			d3.select('#img').html('<img src="'+d.img+'" width="300" />').style( 'display', 'block' )
+		}).attr( 'mouseout', function(node, d) {
+			d3.select('#img').style( 'display', 'none' )
+		})
+
+	});
+
+})
+
+$(window).on('resize', function() {
+
+	relationnalGraph
+		.attr( 'width' , $(window).width()  )
+		.attr( 'height', $(window).height() )
+		.update()
+
+})
+
+changeLinkAccuracy = function(level, obj) {
+	$('.btn.accu').removeClass('active')
+	$(obj).addClass('active')
+	relationnalGraph.properties.linkAccuracy = level
+	relationnalGraph.update()
+}
+
+changeScale = function( scale, obj ) {
+	$('.btn.scale').removeClass('active')
+	$(obj).addClass('active')
+	relationnalGraph.attr('scale', scale).update()
+}
+
+changePriceGravity = function( active, obj ) {
+	$('.btn.pgrav').removeClass('active')
+	$(obj).addClass('active')
+	relationnalGraph.attr('priceGravity', active )
+}   
+
+changeCategorieGravity = function( active, obj ) {
+	$('.btn.cgrav').removeClass('active')
+	$(obj).addClass('active')
+	relationnalGraph.attr('productCat', active )
+}
+
+// var width  = $(document).width(),
+//     height = $(document).height();
+
+// var fill = d3.scale.category20();
+
+// var force = d3.layout.force()
+//     .size([width, height])
+//     .nodes([{}])
+//     .linkDistance(30)
+//     .charge(-60)
+//     .on("tick", tick);
+
+// var svg = d3.select("body").append("svg")
+//     .attr("width", width)
+//     .attr("height", height)
+//     .on("mousemove", mousemove)
+//     .on("mousedown", mousedown);
+
+// svg.append("rect")
+//     .attr("width", width)
+//     .attr("height", height);
+
+// var nodes = force.nodes(),
+//     links = force.links(),
+//     node = svg.selectAll(".node"),
+//     link = svg.selectAll(".link");
+
+// var cursor = svg.append("circle")
+//     .attr("r", 30)
+//     .attr("transform", "translate(-100,-100)")
+//     .attr("class", "cursor");
+
+// restart();
+
+// function mousemove() {
+//   cursor.attr("transform", "translate(" + d3.mouse(this) + ")");
+// }
+
+// function mousedown() {
+//   var point = d3.mouse(this),
+//       node = {x: point[0], y: point[1]},
+//       n = nodes.push(node);
+
+//   // add links to any nearby nodes
+//   nodes.forEach(function(target) {
+//     var x = target.x - node.x,
+//         y = target.y - node.y;
+//     if (Math.sqrt(x * x + y * y) < 30) {
+//       links.push({source: node, target: target});
+//     }
+//   });
+
+//   restart();
+// }
+
+// function tick() {
+
+//   link.attr("x1", function(d) { return d.source.x; })
+//       .attr("y1", function(d) { return d.source.y; })
+//       .attr("x2", function(d) { return d.target.x; })
+//       .attr("y2", function(d) { return d.target.y; });
+
+//   node.attr("cx", function(d) { return d.x; })
+//       .attr("cy", function(d) { return d.y; });
+// }
+
+// function restart() {
+//   link = link.data(links);
+
+//   link.enter().insert("line", ".node")
+//       .attr("class", "link");
+
+//   node = node.data(nodes);
+
+//   node.enter().insert("circle", ".cursor")
+//       .attr("class", "node")
+//       .attr("r", 5)
+//       .call(force.drag);
+
+//   force.start();
+// }
+
+</script>
